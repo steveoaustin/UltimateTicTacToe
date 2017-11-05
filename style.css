@@ -1,0 +1,12 @@
+#content {
+    width: 60%;
+    margin: auto;
+    background-color: #f7f9f9
+}
+
+#board{
+    margin: auto;
+    padding: 100px;
+    width: 600px;
+    height: 600px;
+}
