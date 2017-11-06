@@ -249,7 +249,7 @@ window.onload = (function () {
             c = openStates[point][1]
             var successor = copyBoard(curBoard)
             successor[row][col][r][c] = agent
-            var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent], 4, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER)
+            var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent], 3, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER)
             console.log(value)
             if (value >= maxVal) {
                 maxVal = value
