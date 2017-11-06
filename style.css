@@ -1,7 +1,13 @@
 #content {
     width: 80%;
     margin: auto;
-    background-color: #f7f9f9
+    background-color: #f7f9f9;
+}
+
+#directions {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16pt;
+    padding: 30px;
 }
 
 #board{
@@ -10,14 +16,38 @@
     background-color: lightgray;
 }
 
+body {
+    background-color: rgb(197, 197, 197);
+}
+
+#clear {
+    margin: auto;
+    text-align: center;
+    padding: 10px;
+}
+
+button {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18pt;
+    background-color: white;
+    border: 3px solid #861bc4;
+}
+
+button:hover {
+    background-color: #861bc4;
+    color: white;
+    border: 3px solid #861bc4;
+}
+
 #board-container {
     text-align: center;
     margin: auto;
 }
 
 #header {
-    padding: 40px;
+    padding: 10px;
     text-align: center;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 36pt;
+    height: 100px;
 }
