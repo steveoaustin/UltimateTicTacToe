@@ -25,6 +25,9 @@ window.onload = (function () {
     document.getElementById("clear").onclick = reset;
 
     function reset() {
+        var message = document.getElementById("winner");
+        turn = 'x'
+        message.innerHTML = ""
         context.clearRect(0, 0, canvas.width, canvas.height);
         boardR = 1
         boardC = 1
@@ -173,7 +176,7 @@ window.onload = (function () {
         return maxseq
     }
 
-    function getUltimateValue(curWinners, agent) {
+    function getUltimateValue(curBoard, curWinners, agent) {
         return getValue(curWinners, agent);
     }
 
@@ -188,19 +191,12 @@ window.onload = (function () {
         return full
     }
 
-    function isTerminalUltimate(board, curWinners) {
+    function isTerminalUltimate(curBoard, curWinners) {
         // check for a winner first
         if (getValue(curWinners, 'x') != 0) {
             return true;
         }
-        // check if the board is full
-        full = true;
-        for (var r = 0; r < 3; r++) {
-            for (var c = 0; c < 3; c++) {
-                full = full && isTerminal(board[r][c])
-            }
-        }
-        return full;
+        return getOpenBoard(curBoard, 1, 1) == false
     }
 
     function getWinners(board) {
@@ -322,10 +318,10 @@ window.onload = (function () {
                     return Array(r1, c1)
             }
         }
-        throw 'no open boards'
+        return false
     }
 
-    function minimaxSearch(curBoard, row, col, agent, alpha, beta) {
+    function minimaxSearch(curBoard, row, col, agent, depth, eval) {
         moveR = 1
         moveC = 1
         maxVal = Number.MIN_SAFE_INTEGER
@@ -335,7 +331,8 @@ window.onload = (function () {
             c = openStates[point][1]
             var successor = copyBoard(curBoard)
             successor[row][col][r][c] = agent
-            var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent], 6, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER)
+            var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent],
+                depth, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, eval)
             console.log(value)
             if (value >= maxVal) {
                 maxVal = value
@@ -346,12 +343,12 @@ window.onload = (function () {
         return Array(moveR, moveC)
     }
 
-    function minV(curBoard, oldWinners, row, col, agent, depth, alpha, beta) {
+    function minV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval) {
         if (isTerminalUltimate(curBoard, oldWinners)) {
-            return getUltimateValue(oldWinners, flip[agent])
+            return getUltimateValue(curBoard, oldWinners, flip[agent])
         }
         else if (depth == 0) {
-            return evaluationFunction(curBoard, oldWinners)
+            return eval(curBoard, oldWinners, agent)
         }
         v = Number.MAX_SAFE_INTEGER
         var openBoard = getOpenBoard(curBoard, row, col)
@@ -364,7 +361,7 @@ window.onload = (function () {
             successor = copyBoard(curBoard)
             successor[row][col][r][c] = agent
             successorWinners = getWinnersTemp(successor, oldWinners)
-            var max = maxV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta)
+            var max = maxV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta, eval)
             v = Math.min(v, max)
             if (v <= alpha) {
                 return v
@@ -374,12 +371,12 @@ window.onload = (function () {
         return v
     }
 
-    function maxV(curBoard, oldWinners, row, col, agent, depth, alpha, beta) {
+    function maxV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval) {
         if (isTerminalUltimate(curBoard, oldWinners)) {
-            return getUltimateValue(oldWinners, agent)
+            return getUltimateValue(curBoard, oldWinners, agent)
         }
         else if (depth == 0) {
-            return evaluationFunction(curBoard, oldWinners)
+            return eval(curBoard, oldWinners, agent)
         }
         v = Number.MIN_SAFE_INTEGER
         var openBoard = getOpenBoard(curBoard, row, col)
@@ -395,7 +392,7 @@ window.onload = (function () {
             successor = copyBoard(curBoard)
             successor[row][col][r][r] = agent
             successorWinners = getWinnersTemp(successor, oldWinners)
-            var min = minV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta)
+            var min = minV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta, eval)
             v = Math.max(v, min)
             if (v >= beta) {
                 return v
@@ -405,8 +402,7 @@ window.onload = (function () {
         return v
     }
 
-    function evaluationFunction(curBoard, curWinners) {
-        agent = 'o'
+    function evaluationFunction(curBoard, curWinners, agent) {
         score = 0
         for (var r = 0; r < 3; r++) {
             for (var c = 0; c < 3; c++) {
@@ -440,7 +436,7 @@ window.onload = (function () {
         updateLines();
         var openSpaces = JSON.stringify(getOpenStates(board[boardR][boardC]));
         var space = JSON.stringify(Array(y % 3, x % 3));
-        isOpen = openSpaces.indexOf(space) != -1;
+        var isOpen = openSpaces.indexOf(space) != -1;
         // check if the move is valid
         if (x >= 0 && x <= 8 && y >= 0 && y <= 8 && isOpen &&
             Math.floor(x / 3) == boardC && Math.floor(y / 3) == boardR) {
@@ -453,52 +449,130 @@ window.onload = (function () {
                 boardC = x % 3
                 updateLines();
             }
-            // wait for the x to draw
-            setTimeout(function () {
-                openSpace = getOpenBoard(board, boardR, boardC)
-                boardR = openSpace[0]
-                boardC = openSpace[1]
-                point = minimaxSearch(copyBoard(board), boardR, boardC, 'o')
-                x = point[1] + boardC * 3
-                y = point[0] + boardR * 3
 
-                openSpaces = JSON.stringify(getOpenStates(board[boardR][boardC]));
-                space = JSON.stringify(Array(y % 3, x % 3));
-                isOpen = openSpaces.indexOf(space) != -1;
-                if (!isOpen) {
-                    console.log(y, x)
-                    throw Exception("illegal move")
+            if (turn == 'o') {
+                setTimeout(function () {
+                    // wait for the x to draw
+                    openSpace = getOpenBoard(board, boardR, boardC)
+                    if (!openSpace)
+                        return
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 5, evaluationFunction)
+                    x = point[1] + boardC * 3
+                    y = point[0] + boardR * 3
+
+                    openSpaces = JSON.stringify(getOpenStates(board[boardR][boardC]));
+                    space = JSON.stringify(Array(y % 3, x % 3));
+                    isOpen = openSpaces.indexOf(space) != -1;
+                    if (!isOpen) {
+                        console.log(y, x, openSpaces, space)
+                        return
+                    }
+
+                    drawO(x * SIZE, y * SIZE, Math.floor(x / 3) * 3, Math.floor(y / 3) * 3)
+                    board[boardR][boardC][y % 3][x % 3] = 'o';
+                    getWinners(board)
+                    boardR = y % 3
+                    boardC = x % 3
+                    turn = 'x'
+                    var openSpace = getOpenBoard(board, boardR, boardC)
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    updateLines();
+                    console.log("value after move:", evaluationFunction(board, winners))
+                }, 20)
+
+            }
+
+            /*
+            while (!isTerminalUltimate(board, winners)) {
+                if (turn == 'x') {
+                    console.log("running")
+                    console.log(winners[0], winners[1], winners[2])
+                    openSpace = getOpenBoard(board, boardR, boardC)
+                    if (!openSpace)
+                        continue
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'x', 3, evaluationFunction)
+                    x = point[1] + boardC * 3
+                    y = point[0] + boardR * 3
+    
+                    openSpaces = JSON.stringify(getOpenStates(board[boardR][boardC]));
+                    space = JSON.stringify(Array(y % 3, x % 3));
+                    isOpen = openSpaces.indexOf(space) != -1;
+                    if (!isOpen) {
+                        console.log(y, x)
+                        throw Exception("illegal move")
+                    }
+    
+                    drawX(x * SIZE, y * SIZE, Math.floor(x / 3) * 3, Math.floor(y / 3) * 3)
+                    board[boardR][boardC][y % 3][x % 3] = 'x';
+                    getWinners(board)
+                    boardR = y % 3
+                    boardC = x % 3
+                    turn = 'o'
+                    var openSpace = getOpenBoard(board, boardR, boardC)
+                    if (!openSpace)
+                        continue
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    updateLines();
+                    console.log("value after move:", evaluationFunction(board, winners))
                 }
+    
+                else if (turn == 'o') {
+                    // wait for the x to draw
+                    openSpace = getOpenBoard(board, boardR, boardC)
+                    if (!openSpace)
+                        continue
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 5, evaluationFunction)
+                    x = point[1] + boardC * 3
+                    y = point[0] + boardR * 3
+    
+                    openSpaces = JSON.stringify(getOpenStates(board[boardR][boardC]));
+                    space = JSON.stringify(Array(y % 3, x % 3));
+                    isOpen = openSpaces.indexOf(space) != -1;
+                    if (!isOpen) {
+                        console.log(y, x)
+                        throw Exception("illegal move")
+                    }
+    
+                    drawO(x * SIZE, y * SIZE, Math.floor(x / 3) * 3, Math.floor(y / 3) * 3)
+                    board[boardR][boardC][y % 3][x % 3] = 'o';
+                    getWinners(board)
+                    boardR = y % 3
+                    boardC = x % 3
+                    turn = 'x'
+                    var openSpace = getOpenBoard(board, boardR, boardC)
+                    boardR = openSpace[0]
+                    boardC = openSpace[1]
+                    updateLines();
+                    console.log("value after move:", evaluationFunction(board, winners))
+                }
+            }
+            */
 
-                drawO(x * SIZE, y * SIZE, Math.floor(x / 3) * 3, Math.floor(y / 3) * 3)
-                board[boardR][boardC][y % 3][x % 3] = 'o';
-                getWinners(board)
-                boardR = y % 3
-                boardC = x % 3
-                turn = 'x'
-                var openSpace = getOpenBoard(board, boardR, boardC)
-                boardR = openSpace[0]
-                boardC = openSpace[1]
-                updateLines();
-                console.log("value after move:", evaluationFunction(board, winners))
+            setTimeout(function () {
+                console.log(isTerminalUltimate(board, winners))
+                if (isTerminalUltimate(board, winners)) {
+                    var message = document.getElementById("winner");
+                    message.innerHTML = ""
+                    var text = "Game over, "
+                    console.log(message)
+                    if (getValue(winners, 'x') > 0)
+                        text += " X's Win!"
+                    else if (getValue(winners, 'o') > 0)
+                        text += " O's Win!"
+                    else
+                        text += " it's a tie!"
+                    message.appendChild(document.createTextNode(text))
+                }
             }, 20)
         }
-        setTimeout(function () {
-            console.log(isTerminalUltimate(board, winners))
-            if (isTerminalUltimate(board, winners)) {
-                var message = document.getElementById("winner");
-                message.innerHTML = ""
-                var text = "Game over, "
-                console.log(message)
-                if (getValue(winners, 'x') > 0)
-                    text += " X's Win!"
-                else if (getValue(winners, 'o') > 0)
-                    text += " O's Win!"
-                else
-                    text += " it's a tie!"
-                message.appendChild(document.createTextNode(text))
-            }
-        }, 20)
 
     });
 
