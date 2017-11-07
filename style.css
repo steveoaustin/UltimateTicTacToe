@@ -13,8 +13,9 @@
 #board{
     width: 600px;
     height: 600px;
-    background-color: lightgray;
+    background-color: rgb(214, 214, 214);
 }
+
 
 body {
     background-color: rgb(197, 197, 197);
