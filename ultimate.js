@@ -189,9 +189,9 @@ window.onload = (function () {
         maxseq = 0
         // rows and columns
         for (var r = 0; r < 3; r++) {
-            var curR = 0
-            var curC = 0
             for (var c = 0; c < 3; c++) {
+                var curR = 0
+                var curC = 0
                 if (curBoard[r][c] == agent)
                     curR += 1
                 else if (curBoard[r][c] == flip[agent])
@@ -200,10 +200,15 @@ window.onload = (function () {
                     curC += 1
                 else if (curBoard[c][r] == flip[agent])
                     curC = -3
+                curR = Math.max(0, curR)
+                curC = Math.max(0, curC)
+                if (curR > 2)
+                    curR = 0
+                if (curC > 2)
+                    curC = 0
+                maxseq += curR ** 3 + curC ** 3
             }
-            curR = Math.max(0, curR)
-            curC = Math.max(0, curC)
-            maxseq += curR + curC
+            
         }
         // diagonals
         var curFx = 0
@@ -218,9 +223,13 @@ window.onload = (function () {
             else if (curBoard[2 - i][i] == flip[agent])
                 curFx = -3
         }
+        if (curFx > 2)
+            curFx = 0
+        if (curBx > 2)
+            curBx = 0
         curFx = Math.max(curFx, 0)
         curBx = Math.max(curBx, 0)
-        maxseq += curFx + curBx
+        maxseq += curFx ** 3 + curBx ** 3
         return maxseq
     }
 
@@ -325,7 +334,6 @@ window.onload = (function () {
         for (var r = 0; r < 9; r++){
             row = Array(9)
             for (var c = 0; c < 9; c++) {
-                console.log(squareSize, Array(r * squareSize + squareSize / 2, c * squareSize + squareSize / 2))
                 row[c] = Array(r * (600 / 9) + (600 / 9) / 2, c * (600 / 9) + (600 / 9) / 2)
             }
             centers[r] = row
@@ -502,16 +510,33 @@ window.onload = (function () {
                 if (curWinners[r][c] == '-') {
                     var yourseq = maxSequence(curBoard[r][c], agent)
                     var oppseq = maxSequence(curBoard[r][c], flip[agent])
-                    score += yourseq - 2 * oppseq
-                } else if (curWinners[r][c] == agent) {
-                    score += 100
-                } else if (curWinners[r][c] == flip[agent]) {
-                    score -= 100
-                }
+                    score += 2*  yourseq - oppseq
+                } 
+                // else if (curWinners[r][c] == agent) {
+                //     score += 100
+                // } else if (curWinners[r][c] == flip[agent]) {
+                //     score -= 100
+                // }
             }
+
+            score += 200 * maxSequence(curWinners, agent)
+            score -= 100 * maxSequence(curWinners, flip[agent])
         }
-        return score
+        // prefer winning earlier
+        if (score > 0)
+            return score - 13 * countMoves(curBoard)
+        else
+            return score + 13 * countMoves(curBoard)
     }   
+
+    function wait(ms){
+        var start = new Date().getTime();
+        var end = start;
+        while(end < start + ms) {
+            console.log("waiting")
+          end = new Date().getTime();
+       }
+     }
 
     canvas.addEventListener('mouseup', function (event) {
         var now = Date.now();
@@ -534,6 +559,7 @@ window.onload = (function () {
         if (x >= 0 && x <= 8 && y >= 0 && y <= 8 && isOpen &&
             Math.floor(x / 3) == boardC && Math.floor(y / 3) == boardR &&
             !isTerminalUltimate(board, winners)) {
+            
             if (turn == 'x') {
                 board[boardR][boardC][y % 3][x % 3] = 'x';
                 turn = 'o'
@@ -542,6 +568,7 @@ window.onload = (function () {
                 boardR = y % 3
                 boardC = x % 3
                 updateLines();
+                console.log("value after move:", evaluationFunction(board, winners, 'x'))
             }
 
             if (turn == 'o') {
@@ -578,12 +605,10 @@ window.onload = (function () {
                 }, 20)
 
             }
-
-            /*
+ /*
+            
             while (!isTerminalUltimate(board, winners)) {
                 if (turn == 'x') {
-                    console.log("running")
-                    console.log(winners[0], winners[1], winners[2])
                     openSpace = getOpenBoard(board, boardR, boardC)
                     if (!openSpace)
                         continue
@@ -615,7 +640,7 @@ window.onload = (function () {
                     updateLines();
                     console.log("value after move:", evaluationFunction(board, winners))
                 }
-    
+                
                 else if (turn == 'o') {
                     // wait for the x to draw
                     openSpace = getOpenBoard(board, boardR, boardC)
@@ -623,7 +648,7 @@ window.onload = (function () {
                         continue
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 5, evaluationFunction)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 1, evaluationFunction)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
     
@@ -647,8 +672,8 @@ window.onload = (function () {
                     updateLines();
                     console.log("value after move:", evaluationFunction(board, winners))
                 }
-            }
-            */
+            } */
+        
 
             setTimeout(function () {
                 console.log(isTerminalUltimate(board, winners))
