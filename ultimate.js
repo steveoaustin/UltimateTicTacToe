@@ -591,7 +591,7 @@ window.onload = (function () {
                         return
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, agressiveEvaluationFunction)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, evaluationFunction)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
 
