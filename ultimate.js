@@ -532,12 +532,12 @@ window.onload = (function () {
                 if (curWinners[r][c] == '-') {
                     var yourseq = maxSequence(curBoard[r][c], agent)
                     var oppseq = maxSequence(curBoard[r][c], flip[agent])
-                    score += yourseq 
+                    score += 2 * yourseq 
                     score -= oppseq
                 } 
             }            
         }
-        score += 100 * maxSequence(curWinners, agent)
+        score += 200 * maxSequence(curWinners, agent)
         score -= 100 * maxSequence(curWinners, flip[agent])
         return score
     }  
