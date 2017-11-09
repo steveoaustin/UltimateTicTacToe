@@ -79,7 +79,6 @@ window.onload = (function () {
         context.stroke();
     }
 
-    console.log(centers)
 
     function drawWinnerLine(r, c, section) {
         var offset = 5
@@ -99,7 +98,6 @@ window.onload = (function () {
         var endPoint = centers[r * 3 + endR][c * 3 + endC]
         context.moveTo(point[1], point[0])
         context.lineTo(endPoint[1], endPoint[0])
-        console.log(point[0], point[1], endPoint[0], endPoint[1])
         context.stroke();
     }
 
@@ -209,7 +207,7 @@ window.onload = (function () {
                     curC = 0
                 
             }
-            maxseq += (curR ** 4) + (curC ** 4)
+            maxseq += (curR ** 3) + (curC ** 3)
         }
         // diagonals
         var curFx = 0
@@ -230,7 +228,7 @@ window.onload = (function () {
             curBx = 0
         curFx = Math.max(curFx, 0)
         curBx = Math.max(curBx, 0)
-        maxseq += (curFx ** 4) + (curBx ** 4)
+        maxseq += (curFx ** 3) + (curBx ** 3)
         return maxseq
     }
 
@@ -419,7 +417,7 @@ window.onload = (function () {
         return false
     }
 
-    function minimaxSearch(curBoard, row, col, agent, depth, eval) {
+    function minimaxSearch(curBoard, row, col, agent, depth, eval, deterministic) {
         moveR = 1
         moveC = 1
         maxVal = Number.MIN_SAFE_INTEGER
@@ -432,7 +430,7 @@ window.onload = (function () {
             successor[row][col][r][c] = agent
             var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent],
                 depth, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, eval)
-            console.log("returned ", value)
+            console.log(agent , " returned ", value)
             if (value > maxVal) {
                 maxMoves = Array(Array(r, c))
                 maxVal = value
@@ -443,7 +441,10 @@ window.onload = (function () {
             }
         }
         console.log("picked", maxVal)
-        return maxMoves[Math.floor(Math.random()*maxMoves.length)]
+        if (deterministic)
+            return Array(moveR, moveC)
+        else
+            return maxMoves[Math.floor(Math.random()*maxMoves.length)]
     }
 
     function minV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval) {
@@ -531,12 +532,12 @@ window.onload = (function () {
                 if (curWinners[r][c] == '-') {
                     var yourseq = maxSequence(curBoard[r][c], agent)
                     var oppseq = maxSequence(curBoard[r][c], flip[agent])
-                    score += 2 * yourseq 
+                    score += yourseq 
                     score -= oppseq
                 } 
             }            
         }
-        score += 200 * maxSequence(curWinners, agent)
+        score += 100 * maxSequence(curWinners, agent)
         score -= 100 * maxSequence(curWinners, flip[agent])
         return score
     }  
@@ -571,7 +572,7 @@ window.onload = (function () {
         if (x >= 0 && x <= 8 && y >= 0 && y <= 8 && isOpen &&
             Math.floor(x / 3) == boardC && Math.floor(y / 3) == boardR &&
             !isTerminalUltimate(board, winners)) {
-            
+        
             if (turn == 'x') {
                 board[boardR][boardC][y % 3][x % 3] = 'x';
                 turn = 'o'
@@ -591,7 +592,7 @@ window.onload = (function () {
                         return
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, evaluationFunction)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, evaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
 
@@ -617,7 +618,7 @@ window.onload = (function () {
                 }, 20)
 
             }
- /*
+            /*
             
             while (!isTerminalUltimate(board, winners)) {
                 if (turn == 'x') {
@@ -626,7 +627,7 @@ window.onload = (function () {
                         continue
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'x', 0, agressiveEvaluationFunction)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'x', 2, agressiveEvaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
     
@@ -634,7 +635,6 @@ window.onload = (function () {
                     space = JSON.stringify(Array(y % 3, x % 3));
                     isOpen = openSpaces.indexOf(space) != -1;
                     if (!isOpen) {
-                        console.log(y, x)
                         throw Exception("illegal move")
                     }
     
@@ -660,7 +660,7 @@ window.onload = (function () {
                         continue
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 2, agressiveEvaluationFunction)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 1, agressiveEvaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
     
@@ -668,7 +668,6 @@ window.onload = (function () {
                     space = JSON.stringify(Array(y % 3, x % 3));
                     isOpen = openSpaces.indexOf(space) != -1;
                     if (!isOpen) {
-                        console.log(y, x)
                         throw Exception("illegal move")
                     }
     
@@ -687,12 +686,10 @@ window.onload = (function () {
             } 
 */
             setTimeout(function () {
-                console.log(isTerminalUltimate(board, winners))
                 if (isTerminalUltimate(board, winners)) {
                     var message = document.getElementById("winner");
                     message.innerHTML = ""
                     var text = "Game over, "
-                    console.log(message)
                     if (getValue(winners, 'x') > 0)
                         text += " X's Win!"
                     else if (getValue(winners, 'o') > 0)
