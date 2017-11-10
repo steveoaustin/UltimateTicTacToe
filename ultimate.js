@@ -6,7 +6,7 @@ window.onload = (function () {
     var board = initalizeBoard()
     var winners = initializeWinners()
     var centers = initializeCenters()
-    
+
     var lastCall = 0
     // graphics variables
     var lineColor = "black";
@@ -25,6 +25,11 @@ window.onload = (function () {
     updateLines();
     // activate reset button
     document.getElementById("clear").onclick = reset;
+
+    var message = document.getElementById("winner");
+    message.innerHTML = ""
+    var text = "It's your turn!"
+    message.appendChild(document.createTextNode(text))
 
     function reset() {
         var message = document.getElementById("winner");
@@ -54,7 +59,6 @@ window.onload = (function () {
         }
     }
 
-
     function drawLines(lineWidth, strokeStyle, lineStart, lineLength, size, r, c, color) {
         var lineStartX = lineStart + r * canvasSize / 3;
         var lineStartY = lineStart + c * canvasSize / 3;
@@ -78,7 +82,6 @@ window.onload = (function () {
 
         context.stroke();
     }
-
 
     function drawWinnerLine(r, c, section) {
         var offset = 5
@@ -161,7 +164,7 @@ window.onload = (function () {
         return 0
     }
 
-    function getWinnerPoints (board) {
+    function getWinnerPoints(board) {
         agent = 'x'
         for (var r = 0; r < 3; r++) {
             if (board[r][0] == agent && board[r][1] == agent && board[r][2] == agent)
@@ -205,9 +208,9 @@ window.onload = (function () {
                     curR = 0
                 if (curC > 2)
                     curC = 0
-                
+
             }
-            maxseq += (curR ** 3) + (curC ** 3)
+            maxseq += (curR ** 4) + (curC ** 4)
         }
         // diagonals
         var curFx = 0
@@ -228,7 +231,7 @@ window.onload = (function () {
             curBx = 0
         curFx = Math.max(curFx, 0)
         curBx = Math.max(curBx, 0)
-        maxseq += (curFx ** 3) + (curBx ** 3)
+        maxseq += (curFx ** 4) + (curBx ** 4)
         return maxseq
     }
 
@@ -239,7 +242,7 @@ window.onload = (function () {
                 for (var r = 0; r < 3; r++) {
                     for (var c = 0; c < 3; c++) {
                         if (curBoard[row][col][r][c] != '-')
-                            moves ++
+                            moves++
                     }
                 }
             }
@@ -317,20 +320,20 @@ window.onload = (function () {
     }
 
     function initializeWinners() {
-        winners = Array(3);
+        newWinners = Array(3);
         for (var r = 0; r < 3; r++) {
             winnerRow = Array(3);
             for (var c = 0; c < 3; c++) {
                 winnerRow[c] = '-';
             }
-            winners[r] = winnerRow;
+            newWinners[r] = winnerRow;
         }
-        return winners;
+        return newWinners;
     }
 
     function initializeCenters() {
         centers = Array(9)
-        for (var r = 0; r < 9; r++){
+        for (var r = 0; r < 9; r++) {
             row = Array(9)
             for (var c = 0; c < 9; c++) {
                 row[c] = Array(r * (600 / 9) + (600 / 9) / 2, c * (600 / 9) + (600 / 9) / 2)
@@ -429,8 +432,8 @@ window.onload = (function () {
             var successor = copyBoard(curBoard)
             successor[row][col][r][c] = agent
             var value = minV(successor, getWinnersTemp(successor, winners), r, c, flip[agent],
-                depth, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, eval)
-            console.log(agent , " returned ", value)
+                depth, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, eval, Array(Array(row, col, r, c, agent)))
+            console.log(agent, " returned ", value)
             if (value > maxVal) {
                 maxMoves = Array(Array(r, c))
                 maxVal = value
@@ -444,15 +447,15 @@ window.onload = (function () {
         if (deterministic)
             return Array(moveR, moveC)
         else
-            return maxMoves[Math.floor(Math.random()*maxMoves.length)]
+            return maxMoves[Math.floor(Math.random() * maxMoves.length)]
     }
 
-    function minV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval) {
+    function minV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval, moves) {
         if (isTerminalUltimate(curBoard, oldWinners)) {
             return getUltimateValue(curBoard, oldWinners, flip[agent])
         }
         else if (depth == 0) {
-            var result = eval(curBoard, oldWinners, flip[agent])
+            var result = eval(curBoard, oldWinners, flip[agent], moves)
             return result
         }
         v = Number.MAX_SAFE_INTEGER
@@ -461,7 +464,7 @@ window.onload = (function () {
         col = openBoard[1]
         var openStates = getOpenStates(curBoard[row][col])
         if (openStates.length < 0 || openStates.length > 9) {
-             throw "illegal open states"
+            throw "illegal open states"
         }
         for (var point in openStates) {
             var r = openStates[point][0]
@@ -469,7 +472,9 @@ window.onload = (function () {
             successor = copyBoard(curBoard)
             successor[row][col][r][c] = agent
             successorWinners = getWinnersTemp(successor, oldWinners)
-            var max = maxV(successor, successorWinners, r, c, flip[agent], depth, alpha, beta, eval)
+            successorMoves = JSON.parse(JSON.stringify(moves));
+            successorMoves.push(Array(row, col, r, c, agent))
+            var max = maxV(successor, successorWinners, r, c, flip[agent], depth, alpha, beta, eval, successorMoves)
             v = Math.min(v, max)
             if (v <= alpha) {
                 return v
@@ -479,7 +484,7 @@ window.onload = (function () {
         return v
     }
 
-    function maxV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval) {
+    function maxV(curBoard, oldWinners, row, col, agent, depth, alpha, beta, eval, moves) {
         if (isTerminalUltimate(curBoard, oldWinners)) {
             return getUltimateValue(curBoard, oldWinners, agent)
         }
@@ -492,13 +497,15 @@ window.onload = (function () {
             throw "illegal open states"
         }
         for (var point in openStates) {
-            
+
             var r = openStates[point][0]
             var c = openStates[point][1]
             successor = copyBoard(curBoard)
             successor[row][col][r][r] = agent
             successorWinners = getWinnersTemp(successor, oldWinners)
-            var min = minV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta, eval)
+            successorMoves = JSON.parse(JSON.stringify(moves));
+            successorMoves.push(Array(row, col, r, c, agent))
+            var min = minV(successor, successorWinners, r, c, flip[agent], depth - 1, alpha, beta, eval, successorMoves)
             v = Math.max(v, min)
             if (v >= beta) {
                 return v
@@ -508,48 +515,129 @@ window.onload = (function () {
         return v
     }
 
+    function countTwos(curBoard, agent) {
+        var twos = 0
+        // rows and columns
+        for (var r = 0; r < 3; r++) {
+            var colCount = 0
+            var rowCount = 0
+            for (var c = 0; c < 3; c++) {
+                if (curBoard[r][c] == agent)
+                    rowCount += 1
+                else if (curBoard[r][c] == flip[agent])
+                    rowCount = 0
+                if (curBoard[c][r] == agent)
+                    colCount += 1
+                else if (curBoard[c][r] == flip[agent])
+                    colCount = 0
+            }
+            if (rowCount == 2)
+                twos += 1
+            if (colCount == 2)
+                twos += 1
+        }
+
+        // diagonals
+        var fDiag = 0
+        var bDiag = 0
+        for (var r = 0; r < 3; r++) {
+            if (board[r][r] == agent)
+                bDiag += 1
+            else if (board[r][r] == flip[agent])
+                bDiag = 0
+            if (board[2 - r][r] == agent)
+                fDiag += 1
+            else if (board[2 - r][r] == agent)
+                fDiag = 0
+        }
+        if (fDiag == 2)
+            twos += 1
+        if (bDiag == 2)
+            twos += 2
+        return twos
+    }
+
+    function wasBlock(curBoard, agent, r, c) {
+        curBoard[r][c] = '-'
+        prevTwos = countTwos(curBoard, flip[agent])
+        curBoard[r][c] = agent
+        curTwos = countTwos(curBoard, flip[agent])
+        return prevTwos != curTwos
+    }
+
+    function movesEvaluationFunction(curBoard, curWinners, agent, moves) {
+        prevBoard = copyBoard(board)
+        prevWinners = getWinnersTemp(board, winners)
+        var score = 0
+        var winScore = 0
+        var seqScore = 0
+        var blockScore = 0
+        for (var move in moves) {
+            var row = moves[move][0]
+            var col = moves[move][1]
+            var r = moves[move][2]
+            var c = moves[move][3]
+            var curAgent = moves[move][4]
+            // check if we can block, make a sequence, or win
+            if (prevWinners[row][col] == '-') {
+                // check if the board can be won
+                yourOldSeq = maxSequence(prevBoard[row][col], agent)
+                oppOldSeq = maxSequence(prevBoard[row][col], flip[agent])
+                prevBoard[row][col][r][c] = curAgent
+                yourNewSeq = maxSequence(prevBoard[row][col], agent)
+                oppNewSeq = maxSequence(prevBoard[row][col], flip[agent])
+                var newWinners = getWinnersTemp(prevBoard, prevWinners)
+                if (newWinners[row][col] == agent) {
+                    winScore += 10000
+                } else if (newWinners[row][col] == flip[agent]) {
+                    winScore -= 10000
+                } else if (wasBlock(prevBoard[row][col], curAgent, r, c)){
+                    // if we blocked our opponent
+                    if (agent == curAgent) {
+                        blockScore += 200
+                    } else {
+                        blockScore -= 200
+                    }
+                }
+                else {
+                    // better if the move decreased opponents sequenc
+                    seqScore += oppOldSeq - oppNewSeq
+                    // better if move increased your score
+                    seqScore += yourNewSeq - yourOldSeq
+                }
+
+            }
+
+
+        }
+        score = parseFloat(seqScore + blockScore + winScore)
+
+        return score
+    }
+
     function evaluationFunction(curBoard, curWinners, agent) {
-        score = 0
+        var score = 0
         for (var r = 0; r < 3; r++) {
             for (var c = 0; c < 3; c++) {
                 if (curWinners[r][c] == '-') {
                     var yourseq = maxSequence(curBoard[r][c], agent)
                     var oppseq = maxSequence(curBoard[r][c], flip[agent])
-                    score += yourseq 
-                    score -= oppseq
-                } 
-            }            
+                    score += yourseq
+                    score -= 5 * oppseq
+                }
+            }
         }
         score += 100 * maxSequence(curWinners, agent)
         score -= 100 * maxSequence(curWinners, flip[agent])
         return score
     }
-    
-    function agressiveEvaluationFunction(curBoard, curWinners, agent) {
-        score = 0
-        for (var r = 0; r < 3; r++) {
-            for (var c = 0; c < 3; c++) {
-                if (curWinners[r][c] == '-') {
-                    var yourseq = maxSequence(curBoard[r][c], agent)
-                    var oppseq = maxSequence(curBoard[r][c], flip[agent])
-                    score += 2 * yourseq 
-                    score -= oppseq
-                } 
-            }            
-        }
-        score += 200 * maxSequence(curWinners, agent)
+
+    function simpleEvaluationFunction(curBoard, curWinners, agent) {
+        var score = 0
+        score += 100 * maxSequence(curWinners, agent)
         score -= 100 * maxSequence(curWinners, flip[agent])
         return score
-    }  
-
-    function wait(ms){
-        var start = new Date().getTime();
-        var end = start;
-        while(end < start + ms) {
-            console.log("waiting")
-          end = new Date().getTime();
-       }
-     }
+    }
 
     canvas.addEventListener('mouseup', function (event) {
         var now = Date.now();
@@ -572,8 +660,12 @@ window.onload = (function () {
         if (x >= 0 && x <= 8 && y >= 0 && y <= 8 && isOpen &&
             Math.floor(x / 3) == boardC && Math.floor(y / 3) == boardR &&
             !isTerminalUltimate(board, winners)) {
-        
+    
             if (turn == 'x') {
+                var message = document.getElementById("winner");
+                message.innerHTML = ""
+                var text = "It's your turn!"
+                message.appendChild(document.createTextNode(text))
                 board[boardR][boardC][y % 3][x % 3] = 'x';
                 turn = 'o'
                 drawX(x * SIZE, y * SIZE, Math.floor(x / 3) * 3, Math.floor(y / 3) * 3);
@@ -584,7 +676,11 @@ window.onload = (function () {
                 console.log("value after move:", evaluationFunction(board, winners, 'x'))
             }
 
-            if (turn == 'o') {
+            if (turn == 'o' && !isTerminalUltimate(board, winners)) {
+                var message = document.getElementById("winner");
+                message.innerHTML = ""
+                var text = "Calculating move..."
+                message.appendChild(document.createTextNode(text))
                 setTimeout(function () {
                     // wait for the x to draw
                     openSpace = getOpenBoard(board, boardR, boardC)
@@ -592,7 +688,7 @@ window.onload = (function () {
                         return
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, evaluationFunction, true)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 3, movesEvaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
 
@@ -615,6 +711,10 @@ window.onload = (function () {
                     boardC = openSpace[1]
                     updateLines();
                     console.log(board, "value for O's after move:", evaluationFunction(board, winners, 'o'))
+                    var message = document.getElementById("winner");
+                    message.innerHTML = ""
+                    var text = "It's your turn!"
+                    message.appendChild(document.createTextNode(text))
                 }, 20)
 
             }
@@ -627,7 +727,7 @@ window.onload = (function () {
                         continue
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'x', 2, agressiveEvaluationFunction, true)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'x', 1, movesEvaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
     
@@ -650,7 +750,6 @@ window.onload = (function () {
                     boardR = openSpace[0]
                     boardC = openSpace[1]
                     updateLines();
-                    console.log("value after X's move:", evaluationFunction(board, winners, 'x'))
                 }
                 
                 else if (turn == 'o') {
@@ -660,7 +759,7 @@ window.onload = (function () {
                         continue
                     boardR = openSpace[0]
                     boardC = openSpace[1]
-                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 1, agressiveEvaluationFunction, true)
+                    point = minimaxSearch(copyBoard(board), boardR, boardC, 'o', 2, movesEvaluationFunction, true)
                     x = point[1] + boardC * 3
                     y = point[0] + boardR * 3
     
@@ -681,9 +780,8 @@ window.onload = (function () {
                     boardR = openSpace[0]
                     boardC = openSpace[1]
                     updateLines();
-                    console.log("value after O's move:", agressiveEvaluationFunction(board, winners, 'o'))
                 }
-            } 
+            }
 */
             setTimeout(function () {
                 if (isTerminalUltimate(board, winners)) {
